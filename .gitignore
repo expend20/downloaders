@@ -1,0 +1,5 @@
+downloads
+*.json
+*.txt
+*.log
+.creds
