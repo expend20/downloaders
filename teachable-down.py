@@ -18,6 +18,12 @@ class TeachableDownloader:
         self.password = password
         self.debug = debug
 
+        # prepare download dir
+        self.download_dir = "downloads"
+        if not os.path.exists(self.download_dir):
+            os.makedirs(self.download_dir)
+
+
     def login(self):
         driver = self.driver
 
@@ -214,28 +220,35 @@ class TeachableDownloader:
                 name = name[:122] + "_"
             return name
 
-        # prepare download dir
-        download_dir = "downloads"
-        if not os.path.exists(download_dir):
-            os.makedirs(download_dir)
-
+        proceeded = []
+        file_path_processed = os.path.join(self.download_dir, "processed.json")
+        if os.path.exists(file_path_processed):
+            with open(file_path_processed, "r") as f:
+                proceeded = json.load(f)
+        #
         # cycle through lectures
         for lecture in lectures:
+            raw_name = get_filename(lecture)
+            l = [self.download_dir, raw_name]
+            file_path = os.path.join(*l)
+            file_path_pdf = file_path + ".pdf"
+            file_path_ts = file_path + ".ts"
+            file_path_mp4 = file_path + ".mp4"
+
+            if file_path_mp4 in proceeded:
+                print("already proceeded {}".format(file_path_mp4))
+                continue
+
+            if os.path.exists(file_path_mp4):
+                print("already downloaded {}".format(file_path_mp4))
+                proceeded.append(file_path_mp4)
+                continue
+
             print(
                 "downloading {}: {}".format(
                     lecture["section"], lecture["lecture"]
                 )
             )
-            raw_name = get_filename(lecture)
-            l = [download_dir, raw_name]
-            file_path = os.path.join(*l)
-            file_path_pdf = file_path + ".pdf"
-            file_path_ts = file_path + ".ts"
-            file_path_mp4 = file_path + ".mp4"
-            if os.path.exists(file_path_mp4):
-                print("  already downloaded")
-                continue
-
             print("file_path = {}".format(file_path))
 
             self.del_requests()
@@ -317,6 +330,11 @@ class TeachableDownloader:
                     ]
                     print("executing: {}".format(" ".join(cmd)))
                     subprocess.call(cmd)
+                proceeded.append(f)
+
+        # save proceeded files to downloads/proceeded.json
+        with open(file_path_processed, "w") as f:
+            json.dump(proceeded, f)
 
     def run(self):
         self.login()
